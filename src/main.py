@@ -86,8 +86,6 @@ def login():
     # Wait(driver, 60).until(
     #     EC.presence_of_element_located((By.XPATH, REGEX_CONTINUE))
     # )
-    global is_logged_in
-    is_logged_in = True
     logger.info("Login successful!")
 
 
@@ -96,7 +94,7 @@ def get_available_dates():
     Get the date of the next available appointments.
     """
     driver.get(DATE_URL)
-    if not is_logged_in:
+    if not is_logged_in():
         login()
         return get_available_dates()
     else:
@@ -206,13 +204,11 @@ def reschedule(date: str) -> bool:
     return False
 
 
-is_logged_in = False
-# FIXME: This is not working to if the user is logged in
-# because page source HTML contains errors,
-# not necessarily related to login
-# def is_logged_in():
-    # content = driver.page_source
-    # return content.find('error') == -1
+def is_logged_in(self):
+    cookie = self.driver.get_cookie("_yatri_session")["value"]
+    if len(cookie) <= 350:
+        return False
+    return True
 
 
 def search_for_available_date():
