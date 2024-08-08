@@ -21,6 +21,7 @@ USERNAME = config['USVISA']['USERNAME']
 PASSWORD = config['USVISA']['PASSWORD']
 SCHEDULE_ID = config['USVISA']['SCHEDULE_ID']
 MY_SCHEDULE_DATE = config['USVISA']['MY_SCHEDULE_DATE']
+EARLIEST_ACCEPTABLE_DATE = config['USVISA']['EARLIEST_ACCEPTABLE_DATE']
 COUNTRY_CODE = config['USVISA']['COUNTRY_CODE']
 LOCAL_USE = config['CHROMEDRIVER'].getboolean('LOCAL_USE')
 HUB_ADDRESS = config['CHROMEDRIVER']['HUB_ADDRESS']
@@ -105,14 +106,15 @@ def get_available_dates():
 def get_valid_date(dates: list) -> Union[str, None]:
     """
     Get the first valid date from the list of available dates.
-    A valid date is a date that is earlier than MY_SCHEDULE_DATE.
+    A valid date is a date that is earlier than MY_SCHEDULE_DATE and later than EARLIEST_ACCEPTABLE_DATE
 
     :param dates: List of available dates
     """
-    def is_earlier(date):
+    def is_valid(date):
         my_date = datetime.strptime(MY_SCHEDULE_DATE, "%Y-%m-%d")
+        earliest_date = datetime.strptime(EARLIEST_ACCEPTABLE_DATE, "%Y-%m-%d")
         new_date = datetime.strptime(date, "%Y-%m-%d")
-        return my_date > new_date
+        return earliest_date <= date < my_date
 
     logger.info(f"Checking for a date earlier than {MY_SCHEDULE_DATE}...")
     dates_table = PrettyTable()
@@ -126,15 +128,14 @@ def get_valid_date(dates: list) -> Union[str, None]:
         dates_table.add_row([
             date,
             'Yes' if d.get('business_day') else 'No',
-            GREEN_CIRCLE_EMOJI if is_earlier(date) else RED_CIRCLE_EMJOI,
+            GREEN_CIRCLE_EMOJI if is_valid(date) else RED_CIRCLE_EMJOI,
         ])
     print(dates_table)
 
     for d in dates:
         date = d.get('date')
 
-        # Check if date is earlier than my schedule date
-        if not is_earlier(date):
+        if not is_valid(date):
             continue
 
         # TODO: Check if date meets my condition
@@ -229,9 +230,10 @@ def search_for_available_date():
         else:
             logger.info(f"Reschedule failed, retrying in {COOLDOWN_TIME} seconds...")
             time.sleep(COOLDOWN_TIME)
+    else:
+        logger.info(f"No earlier date, retrying in {RETRY_TIME} seconds...")
+        time.sleep(RETRY_TIME)
 
-    logger.info(f"No earlier date, retrying in {RETRY_TIME} seconds...")
-    time.sleep(RETRY_TIME)
     return search_for_available_date()
 
 
